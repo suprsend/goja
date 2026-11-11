@@ -18,10 +18,10 @@ import (
 
 	"golang.org/x/text/collate"
 
-	js_ast "github.com/dop251/goja/ast"
-	"github.com/dop251/goja/file"
-	"github.com/dop251/goja/parser"
-	"github.com/dop251/goja/unistring"
+	js_ast "github.com/suprsend/goja/ast"
+	"github.com/suprsend/goja/file"
+	"github.com/suprsend/goja/parser"
+	"github.com/suprsend/goja/unistring"
 )
 
 const (
@@ -212,6 +212,27 @@ type Runtime struct {
 	// Stack for tracking objects currently being converted to string
 	// to detect and handle circular references
 	toStringStack []*Object
+
+	// utf16Input and utf16Runes reuse one UTF-16 decode of the string currently
+	// matched by regular expressions. Several patterns are applied to one input
+	// during template parsing; decoding on every pattern copies that input each time.
+	utf16Input String
+	utf16Runes []rune
+}
+
+// cachedUTF16Runes returns the UTF-16 decode of s, reusing the previous decode when s
+// has the same contents. A failed match must not drop this cache: the lexer tries many
+// patterns against one remaining input, and each pattern keeps its own match cache.
+func (rt *Runtime) cachedUTF16Runes(s String) []rune {
+	if rt != nil && rt.utf16Input != nil && rt.utf16Input.SameAs(s) {
+		return rt.utf16Runes
+	}
+	runes := s.utf16Runes()
+	if rt != nil {
+		rt.utf16Input = s
+		rt.utf16Runes = runes
+	}
+	return runes
 }
 
 type StackFrame struct {

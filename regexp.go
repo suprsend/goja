@@ -7,7 +7,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/dlclark/regexp2/v2"
-	"github.com/dop251/goja/unistring"
+	"github.com/suprsend/goja/unistring"
 )
 
 type regexp2MatchCache struct {
@@ -63,8 +63,8 @@ func compileRegexp2(src string, multiline, dotAll, ignoreCase, unicode bool) (*r
 	return &regexp2Wrapper{rx: regexp2Pattern}, nil
 }
 
-func (p *regexpPattern) findSubmatchIndex(s String, start int) regexpResult {
-	return p.regexp2Wrapper.findSubmatchIndex(s, start, p.unicode, true)
+func (p *regexpPattern) findSubmatchIndex(s String, start int, rt *Runtime) regexpResult {
+	return p.regexp2Wrapper.findSubmatchIndex(s, start, p.unicode, true, rt)
 }
 
 func (p *regexpPattern) findAllSubmatchIndex(s String, start int, limit int, sticky bool) []regexpResult {
@@ -96,19 +96,19 @@ type regexpObject struct {
 	standard bool
 }
 
-func (r *regexp2Wrapper) findSubmatchIndex(s String, start int, fullUnicode, doCache bool) regexpResult {
+func (r *regexp2Wrapper) findSubmatchIndex(s String, start int, fullUnicode, doCache bool, rt *Runtime) regexpResult {
 	if fullUnicode {
 		return r.findSubmatchIndexUnicode(s, start, doCache)
 	}
-	return r.findSubmatchIndexUTF16(s, start, doCache)
+	return r.findSubmatchIndexUTF16(s, start, doCache, rt)
 }
 
-func (r *regexp2Wrapper) findSubmatchIndexUTF16(s String, start int, doCache bool) regexpResult {
+func (r *regexp2Wrapper) findSubmatchIndexUTF16(s String, start int, doCache bool, rt *Runtime) regexpResult {
 	var runes []rune
 	if cache := r.cache; cache != nil && cache.posMap == nil && cache.target.SameAs(s) {
 		runes = cache.runes
 	} else {
-		runes = s.utf16Runes()
+		runes = rt.cachedUTF16Runes(s)
 	}
 	var result regexpResult
 	matched := false
@@ -478,7 +478,7 @@ func (r *regexpObject) getLastIndex() int64 {
 func (r *regexpObject) execRegexp(target String) (match bool, result regexpResult) {
 	index := r.getLastIndex()
 	if index >= 0 && index <= int64(target.Length()) {
-		result = r.pattern.findSubmatchIndex(target, int(index))
+		result = r.pattern.findSubmatchIndex(target, int(index), r.val.runtime)
 	}
 	match = len(result.indexes) > 0 && (!r.pattern.sticky || int64(result.indexes[0]) == index)
 

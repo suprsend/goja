@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/dop251/goja/unistring"
+	"github.com/suprsend/goja/unistring"
 )
 
 type templatePropFactory func(*Runtime) Value

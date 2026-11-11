@@ -1,4 +1,4 @@
-module github.com/dop251/goja
+module github.com/suprsend/goja
 
 go 1.26.0
 
